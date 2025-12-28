@@ -20,11 +20,11 @@ RUN apt-get update \
         pkg-config \
         curl \
         gnupg \
-        && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
+# Copy requirements and install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Copy project
 COPY . .
@@ -34,11 +34,12 @@ RUN mkdir -p logs
 
 # Create a non-root user
 RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
+RUN chown -r appuser:appuser /app
 USER appuser
 
-# Expose port
-EXPOSE 5000
+# Expose port (Railway will set PORT environment variable)
+EXPOSE $PORT
 
-# Run the application using full path to gunicorn
-CMD ["/home/appuser/.local/bin/gunicorn", "--config", "gunicorn.conf.py", "run:app"]
+# Run the application using the user's local bin path
+ENV PATH="/home/appuser/.local/bin:${PATH}"
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "run:app"]
