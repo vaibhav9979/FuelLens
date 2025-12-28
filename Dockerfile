@@ -40,5 +40,5 @@ USER appuser
 # Expose port
 EXPOSE 5000
 
-# Run the application
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "run:app"]
+# Run the application using full path to gunicorn
+CMD ["/home/appuser/.local/bin/gunicorn", "--config", "gunicorn.conf.py", "run:app"]
