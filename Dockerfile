@@ -4,6 +4,7 @@ FROM python:3.9-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV PATH="/root/.local/bin:$PATH"
 
 # Set work directory
 WORKDIR /app
@@ -34,12 +35,11 @@ RUN mkdir -p logs
 
 # Create a non-root user
 RUN adduser --disabled-password --gecos '' appuser
-RUN chown -r appuser:appuser /app
+RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port (Railway will set PORT environment variable)
 EXPOSE $PORT
 
-# Run the application using the user's local bin path
-ENV PATH="/home/appuser/.local/bin:${PATH}"
+# Run the application
 CMD ["gunicorn", "--config", "gunicorn.conf.py", "run:app"]
