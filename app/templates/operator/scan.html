@@ -1,0 +1,916 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Vehicle Compliance Check</h2>
+        <p class="text-muted">Scan vehicle for compliance verification</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Scan Vehicle</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="scanMethodTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button">
+                            Manual Entry
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="qr-tab" data-bs-toggle="tab" data-bs-target="#qr" type="button">
+                            QR Scan
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="camera-tab" data-bs-toggle="tab" data-bs-target="#camera" type="button">
+                            Camera
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="manual">
+                        <form method="POST" action="{{ url_for('operator.compliance_check') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="check_type" value="manual">
+                            <div class="mb-3">
+                                <label for="vehicle_number" class="form-label">Vehicle Number</label>
+                                <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" placeholder="E.g., MH02AB1234" required>
+                                <div class="form-text">Enter the vehicle number in standard format (e.g., MH02AB1234)</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes (Optional)</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Check Compliance</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="qr">
+                        <form method="POST" id="qrForm">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="check_type" value="qr">
+                            <div class="mb-3">
+                                <label for="qr_data" class="form-label">QR Code Data</label>
+                                <input type="text" class="form-control" id="qr_data" name="qr_data" placeholder="Scan QR code to fill this field" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="qr_notes" class="form-label">Notes (Optional)</label>
+                                <textarea class="form-control" id="qr_notes" name="notes" rows="3"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="submitQRScan()">Check Compliance</button>
+                        </form>
+                        
+                        <div class="mt-3">
+                            <div id="qrScanner" class="border rounded p-3 bg-light">
+                                <p class="text-center">QR Scanner will appear here</p>
+                                <div class="text-center">
+                                    <i class="fas fa-qrcode fa-5x text-muted"></i>
+                                </div>
+                                <div id="qrReaderContainer" class="mt-3" style="display:none;">
+                                    <video id="qrVideo" autoplay muted playsinline style="width:100%; max-width:400px; height:300px; border: 2px solid #dee2e6; border-radius: 5px; object-fit: cover;"></video>
+                                    <button type="button" class="btn btn-secondary mt-2" onclick="stopQRScanner()">Stop Scanner</button>
+                                </div>
+                                <button type="button" class="btn btn-primary mt-2" onclick="startQRScanner()">Start QR Scanner</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="camera">
+                        <form method="POST" id="cameraForm">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <input type="hidden" name="check_type" value="camera">
+                            <div class="mb-3">
+                                <label for="camera_vehicle_number" class="form-label">Vehicle Number</label>
+                                <input type="text" class="form-control" id="camera_vehicle_number" name="vehicle_number" placeholder="Number will be detected automatically" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Capture Image</label>
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="startCamera()">
+                                        <i class="fas fa-camera"></i> Start Camera
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" onclick="captureImage()" id="captureBtn" disabled>
+                                        <i class="fas fa-camera"></i> Capture Photo
+                                    </button>
+                                    <input type="file" class="form-control d-none" id="camera_image" name="camera_image" accept="image/*" capture="environment">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="camera_notes" class="form-label">Notes (Optional)</label>
+                                <textarea class="form-control" id="camera_notes" name="notes" rows="3"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="submitCameraScan()">Check Compliance</button>
+                        </form>
+                        
+                        <div class="mt-3">
+                            <div id="cameraPreview" class="border rounded p-3 bg-light">
+                                <p class="text-center">Camera preview will appear here</p>
+                                <div class="text-center">
+                                    <i class="fas fa-camera fa-5x text-muted"></i>
+                                </div>
+                                <video id="videoElement" autoplay muted style="display:none; width:100%; height:auto;"></video>
+                                <canvas id="canvasElement" style="display:none; width:100%; height:auto;"></canvas>
+                                <img id="capturedImage" style="display:none; width:100%; height:auto;" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>Enter vehicle number manually for quick lookup</li>
+                    <li>Use QR scan for vehicles with QR compliance certificates</li>
+                    <li>Use camera scan to detect number plates automatically</li>
+                    <li>Results are logged automatically</li>
+                    <li>Block refueling if compliance is expired</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Recent Results</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_results %}
+                    <ul class="list-group list-group-flush">
+                        {% for result in recent_results[:5] %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ result.vehicle.vehicle_number }}</strong><br>
+                                    <small class="text-muted">{{ result.compliance_status|title }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ result.created_at.strftime('%H:%M') }}</small>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No recent results.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function submitQRScan() {
+    const qrData = document.getElementById('qr_data').value;
+    if (!qrData) {
+        alert('Please scan or enter QR code data');
+        return;
+    }
+    
+    // Call the qr-scan endpoint to process the QR data
+    const formData = new FormData();
+    formData.append('qr_data', qrData);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+    
+    // Show processing message
+    const submitBtn = document.querySelector('[onclick="submitQRScan()"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    submitBtn.disabled = true;
+    
+    fetch('/qr-scan', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Restore button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        
+        if (data.status === 'success') {
+            // QR scan successful, now submit compliance check
+            const formData = new FormData();
+            formData.append('vehicle_number', data.vehicle.number);
+            formData.append('check_type', 'qr');
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            
+            fetch('/compliance-check', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    alert('Compliance check processed!');
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during compliance check');
+            });
+        } else {
+            // Restore button
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        // Restore button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        console.error('Error:', error);
+        alert('An error occurred during QR scan');
+    });
+}
+
+// Camera functionality
+let videoStream = null;
+
+function startCamera() {
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const capturedImage = document.getElementById('capturedImage');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const captureBtn = document.getElementById('captureBtn');
+    
+    // Hide other elements and show video
+    document.querySelector('#cameraPreview > p').style.display = 'none';
+    document.querySelector('#cameraPreview > div').style.display = 'none';
+    capturedImage.style.display = 'none';
+    video.style.display = 'block';
+    
+    // Access the device camera with higher resolution settings
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                facingMode: 'environment' // Use rear camera if available
+            } 
+        })
+            .then(function(stream) {
+                videoStream = stream;
+                video.srcObject = stream;
+                captureBtn.disabled = false;
+                
+                // Update button text to indicate camera is active
+                const startBtn = document.querySelector('[onclick="startCamera()"]');
+                startBtn.innerHTML = '<i class="fas fa-video"></i> Camera Active';
+                startBtn.className = 'btn btn-success';
+            })
+            .catch(function(err) {
+                console.error("Error accessing camera: ", err);
+                // Try with default settings if high resolution fails
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        videoStream = stream;
+                        video.srcObject = stream;
+                        captureBtn.disabled = false;
+                        
+                        // Update button text to indicate camera is active
+                        const startBtn = document.querySelector('[onclick="startCamera()"]');
+                        startBtn.innerHTML = '<i class="fas fa-video"></i> Camera Active';
+                        startBtn.className = 'btn btn-success';
+                    })
+                    .catch(function(err) {
+                        console.error("Error accessing camera with default settings: ", err);
+                        alert("Could not access the camera. Please ensure you have granted permission and that your camera is working.");
+                        
+                        // Revert button to original state
+                        const startBtn = document.querySelector('[onclick="startCamera()"]');
+                        startBtn.innerHTML = '<i class="fas fa-camera"></i> Start Camera';
+                        startBtn.className = 'btn btn-outline-primary';
+                    });
+            });
+    } else {
+        alert("Your browser does not support camera access.");
+    }
+}
+
+function captureImage() {
+    if (!videoStream) {
+        alert("Please start the camera first.");
+        return;
+    }
+    
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const capturedImage = document.getElementById('capturedImage');
+    const context = canvas.getContext('2d');
+
+    // Set higher resolution for better OCR quality - minimum 1080p
+    const width = Math.max(video.videoWidth, 1920);
+    const height = Math.max(video.videoHeight, 1080);
+    
+    // Set canvas dimensions to higher resolution
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Calculate aspect ratio to properly fit video in canvas
+    const videoAspect = video.videoWidth / video.videoHeight;
+    const canvasAspect = canvas.width / canvas.height;
+    let drawWidth, drawHeight, offsetX, offsetY;
+    
+    if (videoAspect > canvasAspect) {
+        // Video is wider than canvas (landscape)
+        drawWidth = canvas.width;
+        drawHeight = canvas.width / videoAspect;
+        offsetX = 0;
+        offsetY = (canvas.height - drawHeight) / 2;
+    } else {
+        // Video is taller than canvas (portrait)
+        drawHeight = canvas.height;
+        drawWidth = canvas.height * videoAspect;
+        offsetX = (canvas.width - drawWidth) / 2;
+        offsetY = 0;
+    }
+    
+    // Draw video frame to canvas with proper aspect ratio
+    context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+    
+    // Apply image enhancements for better OCR
+    enhanceImageForOCR(context, canvas);
+
+    // Convert canvas to high-quality data URL
+    const imageData = canvas.toDataURL('image/jpeg', 0.95); // Higher quality JPEG
+
+    // Display the captured image
+    capturedImage.src = imageData;
+    capturedImage.style.display = 'block';
+    video.style.display = 'none';
+
+    // Store the image data in a hidden input for form submission
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'captured_image_data';
+    hiddenInput.id = 'captured_image_data';
+    hiddenInput.value = imageData;
+    document.getElementById('cameraForm').appendChild(hiddenInput);
+
+    // Stop the camera stream
+    videoStream.getTracks().forEach(track => track.stop());
+    videoStream = null;
+
+    // Update button text
+    const startBtn = document.querySelector('[onclick="startCamera()"]');
+    startBtn.innerHTML = '<i class="fas fa-camera"></i> Start Camera';
+    startBtn.className = 'btn btn-outline-primary';
+
+    // Disable capture button
+    document.getElementById('captureBtn').disabled = true;
+
+    alert("Image captured successfully! You can now submit for compliance check.");
+}
+
+function enhanceImageForOCR(context, canvas) {
+    // Apply image enhancements to improve OCR accuracy
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    // Enhance contrast and brightness
+    for (let i = 0; i < data.length; i += 4) {
+        // Increase contrast
+        let r = data[i];
+        let g = data[i + 1];
+        let b = data[i + 2];
+        
+        // Convert to grayscale for better OCR
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // Apply contrast enhancement
+        const contrastFactor = 1.2; // Increase contrast
+        const brightness = 10; // Increase brightness
+        
+        r = ((gray - 128) * contrastFactor + 128 + brightness);
+        g = ((gray - 128) * contrastFactor + 128 + brightness);
+        b = ((gray - 128) * contrastFactor + 128 + brightness);
+        
+        // Clamp values to valid range
+        data[i] = Math.min(255, Math.max(0, r));     // Red
+        data[i + 1] = Math.min(255, Math.max(0, g)); // Green
+        data[i + 2] = Math.min(255, Math.max(0, b)); // Blue
+    }
+    
+    context.putImageData(imageData, 0, 0);
+}
+
+// Update submitCameraScan to handle captured image only
+function submitCameraScan() {
+    const capturedImageData = document.getElementById('captured_image_data');
+    
+    if (capturedImageData && capturedImageData.value) {
+        // Use captured image
+        submitCameraImageData(capturedImageData.value);
+    } else {
+        alert('Please capture an image using the camera');
+        return;
+    }
+}
+
+function submitCameraImageData(imageData) {
+    // Convert data URL to blob
+    const byteString = atob(imageData.split(',')[1]);
+    const mimeString = imageData.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    
+    const blob = new Blob([ab], { type: mimeString });
+    const file = new File([blob], 'captured_image.png', { type: mimeString });
+    
+    submitCameraImageFile(file);
+}
+
+function submitCameraImageFile(imageFile) {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+    
+    // Show processing message
+    const submitBtn = document.querySelector('[onclick="submitCameraScan()"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Image...';
+    submitBtn.disabled = true;
+    
+    fetch('/camera-scan', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Restore button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        
+        if (data.status === 'success') {
+            document.getElementById('camera_vehicle_number').value = data.vehicle_number;
+            
+            // Show appropriate message based on whether vehicle exists in database
+            if (data.vehicle_exists) {
+                // Display detailed vehicle information
+                displayVehicleDetails(data.vehicle_details);
+                
+                // Show option to correct number if needed
+                const vehicleNumberField = document.getElementById('camera_vehicle_number');
+                vehicleNumberField.readOnly = false; // Allow manual editing
+                
+                // Create correction note
+                const correctionNote = document.createElement('div');
+                correctionNote.id = 'correctionNote';
+                correctionNote.className = 'alert alert-info mt-2';
+                correctionNote.innerHTML = `Detected: ${data.vehicle_number}. <a href="#" onclick="editVehicleNumber()">Edit if incorrect</a>`;
+                document.querySelector('.mb-3 label[for="camera_vehicle_number"]').parentElement.appendChild(correctionNote);
+                
+                // Auto-submit the compliance check form after detection
+                const form = document.getElementById('cameraForm');
+                
+                if (vehicleNumberField.value.trim() !== '') {
+                    // Add check_type to the form
+                    const checkTypeInput = document.createElement('input');
+                    checkTypeInput.type = 'hidden';
+                    checkTypeInput.name = 'check_type';
+                    checkTypeInput.value = 'camera';
+                    form.appendChild(checkTypeInput);
+                    
+                    // Submit the form
+                    fetch('/compliance-check', {
+                        method: 'POST',
+                        body: new FormData(form)
+                    })
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        } else {
+                            alert('Compliance check processed!');
+                            // Auto-refresh the page after successful scan to clear the form
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred during compliance check');
+                    });
+                }
+            } else {
+                // Show option to correct number if needed
+                const vehicleNumberField = document.getElementById('camera_vehicle_number');
+                vehicleNumberField.readOnly = false; // Allow manual editing
+                
+                // Create correction note
+                const correctionNote = document.createElement('div');
+                correctionNote.id = 'correctionNote';
+                correctionNote.className = 'alert alert-warning mt-2';
+                correctionNote.innerHTML = `Detected: ${data.vehicle_number}. <a href="#" onclick="editVehicleNumber()">Edit if incorrect</a> | <a href="#" onclick="addVehicleToDatabase()">Add vehicle to database</a>`;
+                document.querySelector('.mb-3 label[for="camera_vehicle_number"]').parentElement.appendChild(correctionNote);
+                
+                alert(`Vehicle detected: ${data.vehicle_number}\nWarning: Vehicle not found in database.`);
+            }
+        } else {
+            // Restore button
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        // Restore button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        console.error('Error:', error);
+        alert('An error occurred during camera scan');
+    });
+}
+
+function displayVehicleDetails(vehicleDetails) {
+    // Create a modal or display area to show vehicle details
+    // First, check if the details container already exists, if not create it
+    let detailsContainer = document.getElementById('vehicleDetailsModal');
+    
+    if (!detailsContainer) {
+        // Create modal container
+        detailsContainer = document.createElement('div');
+        detailsContainer.id = 'vehicleDetailsModal';
+        detailsContainer.className = 'modal fade';
+        detailsContainer.tabIndex = '-1';
+        detailsContainer.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Vehicle Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="vehicleDetailsContent"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="continueWithCompliance()">Continue with Compliance Check</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(detailsContainer);
+    }
+    
+    // Populate the details content
+    const contentDiv = document.getElementById('vehicleDetailsContent');
+    contentDiv.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Owner Information</h6>
+                <table class="table table-sm table-borderless">
+                    <tr><td><strong>Name:</strong></td><td>${vehicleDetails.owner_name}</td></tr>
+                    <tr><td><strong>Email:</strong></td><td>${vehicleDetails.owner_email}</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>${vehicleDetails.owner_phone}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Vehicle Information</h6>
+                <table class="table table-sm table-borderless">
+                    <tr><td><strong>Number:</strong></td><td>${document.getElementById('camera_vehicle_number').value}</td></tr>
+                    <tr><td><strong>Type:</strong></td><td>${vehicleDetails.vehicle_type}</td></tr>
+                    <tr><td><strong>Fuel Type:</strong></td><td>${vehicleDetails.fuel_type}</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <h6>Compliance Information</h6>
+                <table class="table table-sm table-borderless">
+                    <tr><td><strong>CNG Expiry:</strong></td><td>${vehicleDetails.cng_expiry_date}</td></tr>
+                    <tr><td><strong>Insurance Expiry:</strong></td><td>${vehicleDetails.insurance_expiry}</td></tr>
+                    <tr><td><strong>Pollution Expiry:</strong></td><td>${vehicleDetails.pollution_expiry}</td></tr>
+                    <tr><td><strong>Compliance Status:</strong></td><td><span class="badge bg-${getStatusClass(vehicleDetails.compliance_status)}">${vehicleDetails.compliance_status}</span></td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Additional Details</h6>
+                <table class="table table-sm table-borderless">
+                    <tr><td><strong>Last Check:</strong></td><td>${vehicleDetails.last_compliance_date}</td></tr>
+                    <tr><td><strong>Vehicle ID:</strong></td><td>${vehicleDetails.id}</td></tr>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(detailsContainer);
+    modal.show();
+}
+
+function getStatusClass(status) {
+    switch(status) {
+        case 'valid':
+            return 'success';
+        case 'expiring_soon':
+            return 'warning';
+        case 'expired':
+            return 'danger';
+        default:
+            return 'secondary';
+    }
+}
+
+function continueWithCompliance() {
+    // Close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('vehicleDetailsModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // Continue with the compliance check
+    const form = document.getElementById('cameraForm');
+    const vehicleNumberField = document.getElementById('camera_vehicle_number');
+    
+    if (vehicleNumberField.value.trim() !== '') {
+        // Add check_type to the form
+        const checkTypeInput = document.createElement('input');
+        checkTypeInput.type = 'hidden';
+        checkTypeInput.name = 'check_type';
+        checkTypeInput.value = 'camera';
+        form.appendChild(checkTypeInput);
+        
+        // Submit the form
+        fetch('/compliance-check', {
+            method: 'POST',
+            body: new FormData(form)
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                alert('Compliance check processed!');
+                // Auto-refresh the page after successful scan to clear the form
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred during compliance check');
+        });
+    }
+}
+
+function editVehicleNumber() {
+    const vehicleNumberField = document.getElementById('camera_vehicle_number');
+    const currentNumber = vehicleNumberField.value;
+    
+    const newNumber = prompt('Edit vehicle number:', currentNumber);
+    if (newNumber !== null) {
+        vehicleNumberField.value = newNumber.toUpperCase();
+        
+        // Remove the correction note if it exists
+        const correctionNote = document.getElementById('correctionNote');
+        if (correctionNote) {
+            correctionNote.remove();
+        }
+        
+        // Show success message
+        alert('Vehicle number updated successfully!');
+    }
+}
+
+function addVehicleToDatabase() {
+    const vehicleNumber = document.getElementById('camera_vehicle_number').value;
+    
+    if (vehicleNumber.trim() === '') {
+        alert('Please enter a vehicle number first');
+        return;
+    }
+    
+    // Redirect to add vehicle page
+    window.location.href = `/operator/add-vehicle?vehicle_number=${encodeURIComponent(vehicleNumber)}`;
+}
+
+// QR Scanner functionality
+let qrStream = null;
+let qrScannerActive = false;
+
+function startQRScanner() {
+    const video = document.getElementById('qrVideo');
+    const qrReaderContainer = document.getElementById('qrReaderContainer');
+    
+    // Show the scanner container
+    qrReaderContainer.style.display = 'block';
+    
+    // Access the device camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // First, try to access with environment camera
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: { exact: 'environment' }, // Use rear camera if available
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        })
+        .then(function(stream) {
+            qrStream = stream;
+            video.srcObject = stream;
+            
+            // Wait for video to be loaded before starting scan
+            video.onloadedmetadata = function() {
+                qrScannerActive = true;
+                
+                // Start scanning for QR codes
+                scanQRCode();
+            };
+        })
+        .catch(function(err) {
+            console.warn("Environment camera failed, trying default camera: ", err);
+            
+            // If environment camera fails, try default camera
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
+            })
+            .then(function(stream) {
+                qrStream = stream;
+                video.srcObject = stream;
+                
+                // Wait for video to be loaded before starting scan
+                video.onloadedmetadata = function() {
+                    qrScannerActive = true;
+                    
+                    // Start scanning for QR codes
+                    scanQRCode();
+                };
+            })
+            .catch(function(err) {
+                console.error("Default camera also failed: ", err);
+                
+                // If both fail, show user a more helpful message
+                alert("Could not access the camera for QR scanning. Please ensure:\n\n1. You have granted camera permission\n2. Your browser supports camera access\n3. You are using HTTPS (or localhost)\n4. Your camera is working and not in use by another application\n\nError: " + err.message);
+                
+                // Hide the scanner container
+                qrReaderContainer.style.display = 'none';
+            });
+        });
+    } else {
+        alert("Your browser does not support camera access for QR scanning. Please use a modern browser like Chrome, Firefox, or Edge.");
+        qrReaderContainer.style.display = 'none';
+    }
+}
+
+function scanQRCode() {
+    if (!qrScannerActive) return;
+    
+    const video = document.getElementById('qrVideo');
+    
+    // Check if video is ready (has proper dimensions)
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+        // Video not ready yet, try again in a moment
+        if (qrScannerActive) {
+            setTimeout(scanQRCode, 100);
+        }
+        return;
+    }
+    
+    // Create a canvas to capture video frames
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    // Set canvas dimensions
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    try {
+        // Draw current video frame to canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Get image data from canvas
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Use jsQR to decode the QR code
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        if (code) {
+            // QR code detected!
+            document.getElementById('qr_data').value = code.data;
+            stopQRScanner();
+            
+            // Show success message
+            alert('QR code scanned successfully!');
+            
+            // Auto-submit the QR scan
+            submitQRScan();
+        } else {
+            // No QR code detected, continue scanning
+            if (qrScannerActive) {
+                setTimeout(scanQRCode, 100);
+            }
+        }
+        
+    } catch (e) {
+        console.error('Error processing QR frame:', e);
+        // Continue scanning
+        if (qrScannerActive) {
+            setTimeout(scanQRCode, 100);
+        }
+    }
+}
+
+function stopQRScanner() {
+    qrScannerActive = false;
+    
+    if (qrStream) {
+        qrStream.getTracks().forEach(track => track.stop());
+        qrStream = null;
+    }
+    
+    const qrReaderContainer = document.getElementById('qrReaderContainer');
+    qrReaderContainer.style.display = 'none';
+}
+
+// Enhanced QR scan with manual input
+function submitQRScan() {
+    const qrData = document.getElementById('qr_data').value;
+    if (!qrData) {
+        alert('Please scan or enter QR code data');
+        return;
+    }
+    
+    // Call the qr-scan endpoint to process the QR data
+    const formData = new FormData();
+    formData.append('qr_data', qrData);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+    
+    // Show processing message
+    const submitBtn = document.querySelector('[onclick="submitQRScan()"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    submitBtn.disabled = true;
+    
+    fetch('/qr-scan', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Restore button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        
+        if (data.status === 'success') {
+            // QR scan successful, now submit compliance check
+            const formData = new FormData();
+            formData.append('vehicle_number', data.vehicle.number);
+            formData.append('check_type', 'qr');
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            
+            fetch('/compliance-check', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    alert('Compliance check processed!');
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during compliance check');
+            });
+        } else {
+            // Restore button
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        // Restore button
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        console.error('Error:', error);
+        alert('An error occurred during QR scan');
+    });
+}
+
+</script>
+{% endblock %}

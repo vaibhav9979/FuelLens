@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>User Details</h2>
+        <p class="text-muted">Detailed information for {{ user.get_full_name() }}</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>User Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <p class="form-control-plaintext">{{ user.get_full_name() }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <p class="form-control-plaintext">{{ user.email }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <p class="form-control-plaintext">{{ user.phone if user.phone else 'N/A' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge bg-{{ 'primary' if user.role == 'vehicle_owner' else 'success' if user.role == 'station_operator' else 'warning' }}">
+                                    {{ user.role|title }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge bg-{{ 'success' if user.is_active else 'secondary' }}">
+                                    {{ 'Active' if user.is_active else 'Inactive' }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Created</label>
+                            <p class="form-control-plaintext">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if user.get_assigned_station() %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Assigned Station</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Station Name</label>
+                    <p class="form-control-plaintext">{{ user.get_assigned_station().name }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Station Address</label>
+                    <p class="form-control-plaintext">{{ user.get_assigned_station().get_full_address() }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user.is_active %}
+                        <button class="btn btn-danger" onclick="toggleUserStatus({{ user.id }}, true)">
+                            <i class="fas fa-user-slash"></i> Deactivate User
+                        </button>
+                    {% else %}
+                        <button class="btn btn-success" onclick="activateUser({{ user.id }})">
+                            <i class="fas fa-user-check"></i> Activate User
+                        </button>
+                    {% endif %}
+                    <button class="btn btn-outline-danger" onclick="deleteUser({{ user.id }})">
+                        <i class="fas fa-trash"></i> Delete User
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        {% if vehicles %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Associated Vehicles</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for vehicle in vehicles %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ vehicle.vehicle_number }}</strong><br>
+                                <small class="text-muted">{{ vehicle.vehicle_type|title }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{{ 'success' if vehicle.compliance_status == 'valid' else 'warning' if vehicle.compliance_status == 'expiring_soon' else 'danger' }}">
+                                    {{ vehicle.compliance_status|title }}
+                                </span>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<input type="hidden" id="csrf_token" value="{{ csrf_token() }}" />
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleUserStatus(userId, isActive) {
+    if (confirm('Are you sure you want to deactivate this user?')) {
+        fetch(`/user/${userId}/toggle-active`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.getElementById('csrf_token').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+}
+
+function activateUser(userId) {
+    if (confirm('Are you sure you want to activate this user?')) {
+        fetch(`/user/${userId}/toggle-active`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.getElementById('csrf_token').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        fetch(`/user/${userId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.getElementById('csrf_token').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '/admin/users';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,11 @@
+# Development requirements for FuelLens
+-r base.txt
+
+# Development-specific packages
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-flask==1.2.0
+flake8==6.1.0
+black==23.10.1
+bandit==1.7.5
+safety==2.4.0

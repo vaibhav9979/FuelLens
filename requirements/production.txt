@@ -1,0 +1,6 @@
+# Production requirements for FuelLens
+-r base.txt
+
+# Production-specific packages
+gunicorn==21.2.0
+psycopg2-binary==2.9.7

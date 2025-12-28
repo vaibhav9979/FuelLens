@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Find Nearby Fuel Stations</h2>
+        <p class="text-muted">Enter your location to find CNG fuel stations near you</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Enter Your Location</h5>
+            </div>
+            <div class="card-body">
+                <form id="location-form">
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <input type="text" class="form-control" id="address" placeholder="Enter your address">
+                    </div>
+                    <div class="mb-3">
+                        <label for="latitude" class="form-label">Latitude</label>
+                        <input type="number" step="any" class="form-control" id="latitude" placeholder="Enter latitude">
+                    </div>
+                    <div class="mb-3">
+                        <label for="longitude" class="form-label">Longitude</label>
+                        <input type="number" step="any" class="form-control" id="longitude" placeholder="Enter longitude">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="find-stations-btn">Find Stations</button>
+                    <button type="button" class="btn btn-secondary" id="use-my-location">Use My Location</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>How to Use</h5>
+            </div>
+            <div class="card-body">
+                <p>You can find nearby fuel stations in two ways:</p>
+                <ol>
+                    <li><strong>Enter Address:</strong> Type your address and we'll find stations nearby</li>
+                    <li><strong>Use My Location:</strong> Allow location access to find stations near you</li>
+                    <li><strong>Enter Coordinates:</strong> Input latitude and longitude directly</li>
+                </ol>
+                <p>Results will show stations within 10km radius with information about:</p>
+                <ul>
+                    <li>Distance from your location</li>
+                    <li>Current load status (Busy/Normal/Free)</li>
+                    <li>Fuel availability</li>
+                    <li>Opening status</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4" id="results-container" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Nearby Stations</h5>
+            </div>
+            <div class="card-body">
+                <div id="results-content">
+                    <!-- Results will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Use my location button
+    document.getElementById('use-my-location').addEventListener('click', function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    document.getElementById('latitude').value = position.coords.latitude;
+                    document.getElementById('longitude').value = position.coords.longitude;
+                    findStations();
+                },
+                function(error) {
+                    alert('Unable to get your location: ' + error.message);
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by your browser.');
+        }
+    });
+    
+    // Find stations button
+    document.getElementById('find-stations-btn').addEventListener('click', findStations);
+    
+    function findStations() {
+        const lat = document.getElementById('latitude').value;
+        const lon = document.getElementById('longitude').value;
+        
+        if (!lat || !lon) {
+            alert('Please enter latitude and longitude.');
+            return;
+        }
+        
+        // Show loading
+        const resultsContent = document.getElementById('results-content');
+        resultsContent.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        document.getElementById('results-container').style.display = 'block';
+        
+        // Make API call
+        fetch(`/api/nearby-stations?lat=${lat}&lon=${lon}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultsContent.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                } else {
+                    displayStations(data.stations);
+                }
+            })
+            .catch(error => {
+                resultsContent.innerHTML = '<div class="alert alert-danger">Error fetching stations. Please try again.</div>';
+                console.error('Error:', error);
+            });
+    }
+    
+    function displayStations(stations) {
+        const resultsContent = document.getElementById('results-content');
+        
+        if (stations.length === 0) {
+            resultsContent.innerHTML = '<div class="alert alert-info">No fuel stations found nearby.</div>';
+            return;
+        }
+        
+        let html = '<div class="row">';
+        stations.forEach(station => {
+            html += `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">${station.name}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">${station.address}</small><br>
+                            <strong>Distance:</strong> ${station.distance} km<br>
+                            <strong>Status:</strong> 
+                            ${station.is_open ? 
+                                `<span class="badge bg-success">Open</span>` : 
+                                `<span class="badge bg-danger">Closed</span>`
+                            }<br>
+                            <strong>Load:</strong> 
+                            ${station.live_load === 'free' ? 
+                                `<span class="badge bg-success">Free</span>` : 
+                                station.live_load === 'normal' ? 
+                                    `<span class="badge bg-info">Normal</span>` : 
+                                    `<span class="badge bg-danger">Busy</span>`
+                            }<br>
+                            <strong>Fuel:</strong> 
+                            ${station.fuel_availability === 'available' ? 
+                                `<span class="badge bg-success">Available</span>` : 
+                                station.fuel_availability === 'limited' ? 
+                                    `<span class="badge bg-warning">Limited</span>` : 
+                                    `<span class="badge bg-danger">Unavailable</span>`
+                            }
+                        </p>
+                        <a href="/station/${station.id}" class="btn btn-sm btn-outline-primary">View Details</a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary">Get Directions</a>
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        html += '</div>';
+        
+        resultsContent.innerHTML = html;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>QR Code</h2>
+        <p class="text-muted">QR code for compliance verification of {{ vehicle.vehicle_number }}</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>QR Code</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if qr_code %}
+                    <img src="{{ url_for('static', filename=qr_code.qr_code_path.replace('app/static/', '')) }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 300px;">
+                    <p class="text-muted">Scan this QR code for instant compliance verification</p>
+                    <a href="{{ url_for('static', filename=qr_code.qr_code_path.replace('app/static/', '')) }}" download class="btn btn-primary">
+                        <i class="fas fa-download"></i> Download QR Code
+                    </a>
+                {% else %}
+                    <p class="text-muted">No QR code generated yet</p>
+                    <a href="{{ url_for('user.generate_qr', vehicle_id=vehicle.id) }}" class="btn btn-primary">Generate QR Code</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Vehicle Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Vehicle Number</label>
+                    <p class="form-control-plaintext">{{ vehicle.vehicle_number }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Owner Name</label>
+                    <p class="form-control-plaintext">{{ vehicle.owner_name }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Vehicle Type</label>
+                    <p class="form-control-plaintext">{{ vehicle.vehicle_type|title }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Compliance Status</label>
+                    <div>
+                        {% if vehicle.compliance_status == 'valid' %}
+                            <span class="badge bg-success">Valid</span>
+                        {% elif vehicle.compliance_status == 'expiring_soon' %}
+                            <span class="badge bg-warning">Expiring Soon</span>
+                        {% else %}
+                            <span class="badge bg-danger">Expired</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Expiry Date</label>
+                    <p class="form-control-plaintext">
+                        {% if vehicle.cng_expiry_date %}
+                            {{ vehicle.cng_expiry_date.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>QR Code Information</h5>
+            </div>
+            <div class="card-body">
+                <p>The QR code contains:</p>
+                <ul>
+                    <li>Vehicle ID: {{ vehicle.id }}</li>
+                    <li>Vehicle Number: {{ vehicle.vehicle_number }}</li>
+                    <li>Compliance Expiry Date</li>
+                    <li>Generation Timestamp</li>
+                </ul>
+                <p class="text-muted">This QR code can be scanned by fuel station operators to verify compliance status instantly.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

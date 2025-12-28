@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Compliance History</h2>
+        <p class="text-muted">View all compliance checks performed at your station</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Compliance Check History</h5>
+                <div class="d-flex">
+                    <form method="GET" class="d-flex">
+                        <select name="status" class="form-select me-2" onchange="this.form.submit()">
+                            <option value="">All Status</option>
+                            <option value="valid" {% if status_filter == 'valid' %}selected{% endif %}>Valid</option>
+                            <option value="expiring_soon" {% if status_filter == 'expiring_soon' %}selected{% endif %}>Expiring Soon</option>
+                            <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
+                        </select>
+                        <input type="date" name="date" class="form-select me-2" value="{{ request.args.get('date', '') }}" onchange="this.form.submit()">
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if compliance_records.items %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle Number</th>
+                                    <th>Owner Name</th>
+                                    <th>Check Type</th>
+                                    <th>Compliance Status</th>
+                                    <th>Checker</th>
+                                    <th>Date & Time</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in compliance_records.items %}
+                                <tr>
+                                    <td>{{ record.vehicle.vehicle_number }}</td>
+                                    <td>{{ record.vehicle.owner_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'primary' if record.check_type == 'manual' else 'success' if record.check_type == 'qr' else 'info' }}">
+                                            {{ record.check_type|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if record.compliance_status == 'valid' %}
+                                            <span class="badge bg-success">Valid</span>
+                                        {% elif record.compliance_status == 'expiring_soon' %}
+                                            <span class="badge bg-warning">Expiring Soon</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.checker.get_full_name() }}</td>
+                                    <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if record.notes %}
+                                            {{ record.notes[:50] }}{% if record.notes|length > 50 %}...{% endif %}
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Compliance history pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if compliance_records.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('operator.history', page=compliance_records.prev_num, status=status_filter, date=request.args.get('date')) }}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in compliance_records.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != compliance_records.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('operator.history', page=page_num, status=status_filter, date=request.args.get('date')) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <a class="page-link" href="#">{{ page_num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#">...</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if compliance_records.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('operator.history', page=compliance_records.next_num, status=status_filter, date=request.args.get('date')) }}">Next</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h5>No compliance records found</h5>
+                        <p class="text-muted">No compliance checks have been performed at your station yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+# Testing requirements for FuelLens
+-r base.txt
+
+# Testing-specific packages
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-flask==1.2.0
+factory-boy==3.3.0
+Faker==21.0.0

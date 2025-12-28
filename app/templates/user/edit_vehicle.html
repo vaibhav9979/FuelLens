@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Edit Vehicle</h2>
+        <p class="text-muted">Update vehicle information and compliance details</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Vehicle Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('user.edit_vehicle', vehicle_id=vehicle.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="mb-3">
+                        <label for="vehicle_number" class="form-label">Vehicle Number</label>
+                        <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" value="{{ vehicle.vehicle_number }}" readonly>
+                        <div class="form-text">Vehicle number cannot be changed after registration</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="owner_name" class="form-label">Owner Name</label>
+                        <input type="text" class="form-control" id="owner_name" name="owner_name" value="{{ vehicle.owner_name }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="vehicle_type" class="form-label">Vehicle Type</label>
+                                <select class="form-select" id="vehicle_type" name="vehicle_type" required>
+                                    <option value="car" {% if vehicle.vehicle_type == 'car' %}selected{% endif %}>Car</option>
+                                    <option value="auto" {% if vehicle.vehicle_type == 'auto' %}selected{% endif %}>Auto</option>
+                                    <option value="bus" {% if vehicle.vehicle_type == 'bus' %}selected{% endif %}>Bus</option>
+                                    <option value="truck" {% if vehicle.vehicle_type == 'truck' %}selected{% endif %}>Truck</option>
+                                    <option value="bike" {% if vehicle.vehicle_type == 'bike' %}selected{% endif %}>Bike</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cng_test_date" class="form-label">CNG Test Date (Optional)</label>
+                                <input type="date" class="form-control" id="cng_test_date" name="cng_test_date" value="{{ vehicle.cng_test_date.strftime('%Y-%m-%d') if vehicle.cng_test_date else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="cng_expiry_date" class="form-label">CNG Expiry Date (Optional)</label>
+                        <input type="date" class="form-control" id="cng_expiry_date" name="cng_expiry_date" value="{{ vehicle.cng_expiry_date.strftime('%Y-%m-%d') if vehicle.cng_expiry_date else '' }}">
+                        <div class="form-text">Update the CNG compliance expiry date if changed</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Vehicle</button>
+                    <a href="{{ url_for('user.vehicles') }}" class="btn btn-secondary">Cancel</a>
+                    <a href="{{ url_for('user.vehicle_details', vehicle_id=vehicle.id) }}" class="btn btn-outline-secondary">View Details</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Vehicle Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Current Compliance Status:</strong>
+                    <div class="mt-2">
+                        {% if vehicle.compliance_status == 'valid' %}
+                            <span class="badge bg-success fs-5">Valid</span>
+                        {% elif vehicle.compliance_status == 'expiring_soon' %}
+                            <span class="badge bg-warning fs-5">Expiring Soon</span>
+                        {% else %}
+                            <span class="badge bg-danger fs-5">Expired</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Days to Expiry:</strong>
+                    <div class="mt-2">
+                        {% set days = vehicle.days_to_expiry() %}
+                        {% if days is not none %}
+                            <span class="fs-5">{{ days }} days</span>
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <p class="mb-0">Updating expiry date will recalculate compliance status and update any scheduled reminders.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('user.generate_qr', vehicle_id=vehicle.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-qrcode"></i> Generate QR Code
+                    </a>
+                    <a href="{{ url_for('user.vehicle_details', vehicle_id=vehicle.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-info-circle"></i> View Details
+                    </a>
+                    <a href="{{ url_for('user.documents') }}?vehicle_id={{ vehicle.id }}" class="btn btn-outline-info">
+                        <i class="fas fa-file"></i> Related Documents
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
