@@ -4,7 +4,6 @@ FROM python:3.9-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PATH="/root/.local/bin:$PATH"
 
 # Set work directory
 WORKDIR /app
@@ -23,9 +22,9 @@ RUN apt-get update \
         gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Copy requirements and install Python dependencies globally
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Verify gunicorn is installed
 RUN which gunicorn || (echo "gunicorn not found" && exit 1)
