@@ -26,8 +26,11 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Verify gunicorn is installed
-RUN which gunicorn || (echo "gunicorn not found" && exit 1)
+# Debug: List all installed packages
+RUN pip list
+
+# Debug: Check where gunicorn might be installed
+RUN find / -name "gunicorn" -type f 2>/dev/null || echo "gunicorn not found"
 
 # Copy project
 COPY . .
