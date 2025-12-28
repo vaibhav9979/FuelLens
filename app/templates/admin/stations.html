@@ -1,0 +1,149 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Manage Fuel Stations</h2>
+        <p class="text-muted">View and manage all registered CNG fuel stations</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>All Fuel Stations</h5>
+                <div class="d-flex">
+                    <a href="{{ url_for('admin.pending_stations') }}" class="btn btn-warning me-2">
+                        <i class="fas fa-clock"></i> Pending Stations ({{ (stations.items | selectattr('is_approved', 'equalto', false) | list | length) if stations.items else 0 }})
+                    </a>
+                    <form method="GET" class="d-flex">
+                        <select name="approval" class="form-select me-2" onchange="this.form.submit()">
+                            <option value="">All Approvals</option>
+                            <option value="approved" {% if approval_filter == 'approved' %}selected{% endif %}>Approved</option>
+                            <option value="pending" {% if approval_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="rejected" {% if approval_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                        </select>
+                        <select name="status" class="form-select me-2" onchange="this.form.submit()">
+                            <option value="">All Statuses</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if stations.items %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Station Name</th>
+                                    <th>Location</th>
+                                    <th>Owner</th>
+                                    <th>Contact</th>
+                                    <th>Approval Status</th>
+                                    <th>Active Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for station in stations.items %}
+                                <tr>
+                                    <td>{{ station.id }}</td>
+                                    <td><strong>{{ station.name }}</strong></td>
+                                    <td>{{ station.city }}, {{ station.state }}</td>
+                                    <td>
+                                        {% if station.owner %}
+                                            {{ station.owner.get_full_name() }}
+                                        {% else %}
+                                            <em>Owner not found</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if station.phone %}{{ station.phone }}{% endif %}<br>
+                                        {% if station.email %}{{ station.email }}{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if station.is_approved %}
+                                            <span class="badge bg-success">Approved</span>
+                                            {% if station.approval_date %}
+                                                <br><small class="text-muted">{{ station.approval_date.strftime('%Y-%m-%d') }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if station.is_active %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Rejected</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if station.is_active else 'secondary' }}">
+                                            {{ 'Active' if station.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('admin.station_details', station_id=station.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Station pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if stations.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.stations', page=stations.prev_num, status=status_filter, approval=approval_filter) }}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in stations.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != stations.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.stations', page=page_num, status=status_filter, approval=approval_filter) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <a class="page-link" href="#">{{ page_num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#">...</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if stations.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.stations', page=stations.next_num, status=status_filter, approval=approval_filter) }}">Next</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-gas-pump fa-3x text-muted mb-3"></i>
+                        <h5>No fuel stations found</h5>
+                        <p class="text-muted">There are no fuel stations matching your criteria.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

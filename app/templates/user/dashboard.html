@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Welcome, {{ current_user.first_name }}!</h2>
+        <p class="text-muted">Your CNG Compliance Dashboard</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-car fa-3x mb-2"></i>
+                <h5>{{ vehicles|length }}</h5>
+                <p class="card-text">Total Vehicles</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-3x mb-2"></i>
+                <h5>
+                    {% set valid_count = vehicles|selectattr('compliance_status', 'equalto', 'valid')|list|length %}
+                    {{ valid_count }}
+                </h5>
+                <p class="card-text">Valid Compliance</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x mb-2"></i>
+                <h5>
+                    {% set expiring_count = vehicles|selectattr('compliance_status', 'equalto', 'expiring_soon')|list|length %}
+                    {{ expiring_count }}
+                </h5>
+                <p class="card-text">Expiring Soon</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body text-center">
+                <i class="fas fa-times-circle fa-3x mb-2"></i>
+                <h5>
+                    {% set expired_count = vehicles|selectattr('compliance_status', 'equalto', 'expired')|list|length %}
+                    {{ expired_count }}
+                </h5>
+                <p class="card-text">Expired</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Your Vehicles</h5>
+            </div>
+            <div class="card-body">
+                {% if vehicles %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle Number</th>
+                                    <th>Owner Name</th>
+                                    <th>Vehicle Type</th>
+                                    <th>Compliance Status</th>
+                                    <th>Days to Expiry</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vehicle in vehicles %}
+                                <tr>
+                                    <td>{{ vehicle.vehicle_number }}</td>
+                                    <td>{{ vehicle.owner_name }}</td>
+                                    <td>{{ vehicle.vehicle_type|title }}</td>
+                                    <td>
+                                        {% if vehicle.compliance_status == 'valid' %}
+                                            <span class="badge bg-success">Valid</span>
+                                        {% elif vehicle.compliance_status == 'expiring_soon' %}
+                                            <span class="badge bg-warning">Expiring Soon</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set days = vehicle.days_to_expiry() %}
+                                        {% if days is not none %}
+                                            {{ days }} days
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('user.vehicle_details', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        <a href="{{ url_for('user.edit_vehicle', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                        <a href="{{ url_for('user.generate_qr', vehicle_id=vehicle.id) }}" class="btn btn-sm btn-outline-info">QR</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No vehicles registered yet. <a href="{{ url_for('user.add_vehicle') }}">Add your first vehicle</a>.</p>
+                {% endif %}
+                <a href="{{ url_for('user.add_vehicle') }}" class="btn btn-primary">Add Vehicle</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Compliance Checks</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_compliance %}
+                    <ul class="list-group list-group-flush">
+                        {% for record in recent_compliance[:5] %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ record.vehicle.vehicle_number }}</strong><br>
+                                    <small class="text-muted">{{ record.station.name }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ 'success' if record.compliance_status == 'valid' else 'warning' if record.compliance_status == 'expiring_soon' else 'danger' }}">
+                                        {{ record.compliance_status|title }}
+                                    </span><br>
+                                    <small class="text-muted">{{ record.created_at.strftime('%Y-%m-%d') }}</small>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No compliance checks recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Notifications</h5>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                    <ul class="list-group list-group-flush">
+                        {% for notification in notifications[:5] %}
+                        <li class="list-group-item">
+                            <strong>{{ notification.title }}</strong><br>
+                            <small class="text-muted">{{ notification.message }}</small><br>
+                            <small class="text-muted">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{{ url_for('user.notifications') }}" class="btn btn-sm btn-outline-primary mt-2">View All</a>
+                {% else %}
+                    <p class="text-muted">No new notifications.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
