@@ -1,4 +1,5 @@
-from app import db
+from flask_sqlalchemy import SQLAlchemy
+db = SQLAlchemy()
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 import bcrypt
@@ -112,4 +113,5 @@ class User(db.Model, UserMixin):
         assignment = StationEmployee.query.filter_by(employee_id=self.id, is_active=True).first()
         if assignment:
             return assignment.station
+
         return None
