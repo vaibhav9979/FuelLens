@@ -6,6 +6,10 @@ import bcrypt
 import jwt
 from app import create_app
 from app.utils.security import hash_password, verify_password
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+from app import db  # This might still cause circular import
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -115,3 +119,4 @@ class User(db.Model, UserMixin):
             return assignment.station
 
         return None
+
